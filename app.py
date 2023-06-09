@@ -1,26 +1,35 @@
-import requests
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
+import json
 
 app = Flask(__name__)
-data = None  # This will store the last stored JSON data
 
-@app.route('/', methods=['POST'])
-def store_data():
-    json_data = request.get_json()  # Get the JSON data from the request
-    json_response = send_request_to_api(json_data)  # Send the request to the target API and get the JSON response
-    global data
-    data = json_response  # Update the last stored JSON data
-    return jsonify({'message': 'Data stored successfully'})
+DATA_FILE = 'data.json'
 
-def send_request_to_api(json_data):
-    url = 'https://etahamad-new-plant-disease-detection.hf.space/run/predict'
-    headers = {'Content-Type': 'application/json'}
-    response = requests.post(url, json=json_data, headers=headers, proxies={})  # Disable the proxy configuration
-    return response.json()  # Return the JSON response
+def read_data():
+    try:
+        with open(DATA_FILE, 'r') as file:
+            data = json.load(file)
+    except FileNotFoundError:
+        data = {}
+    return data
 
-@app.route('/', methods=['GET'])
-def get_data():
+def write_data(data):
+    with open(DATA_FILE, 'w') as file:
+        json.dump(data, file)
+
+@app.route('/weatherdata', methods=['POST'])
+def create_weather_data():
+    weather_data = request.get_json()
+
+    write_data(weather_data)
+
+    response = {'message': 'Weather data created successfully'}
+    return jsonify(response), 201
+
+@app.route('/weatherdata', methods=['GET'])
+def get_weather_data():
+    data = read_data()
     return jsonify(data)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)
